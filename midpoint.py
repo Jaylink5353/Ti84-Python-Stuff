@@ -18,7 +18,7 @@ def find_missing_endpoint(mid_x, mid_y, known_x, known_y):
 
 def main():
     while True:
-        print("Midpoint Toolkit by Jamez x ChatGPT")
+        print("Midpoint Toolkit by Jaylink x ChatGPT")
         print("1: Midpoint from endpoints")
         print("2: Length from endpoint + midpoint")
         print("3: Missing endpoint from midpoint + known")
