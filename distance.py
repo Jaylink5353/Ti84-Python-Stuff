@@ -1,6 +1,7 @@
 import math
 def main():
-    while True:   
+    while True: 
+        print("Made by Jaymes")
         # Prompt for coordinates of the first point
         x1 = float(input("Enter x1: "))
         y1 = float(input("Enter y1: "))
