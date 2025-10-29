@@ -46,6 +46,7 @@ def get_points():
 # ======== TABLE DISPLAY ========
 
 def show_table(orig, new):
+    plt.cls()
     print("")
     print("#   Preimage (x,y)     Image (x,y)")
     print("----------------------------------")
