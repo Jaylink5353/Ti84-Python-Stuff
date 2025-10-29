@@ -166,6 +166,7 @@ def graph_mode():
 # ======== MAIN MENU ========
 
 def main():
+    plt.cls()
     while True:
         print("")
         print("=== GEOMETRIC TRANSFORMATIONS ===")
