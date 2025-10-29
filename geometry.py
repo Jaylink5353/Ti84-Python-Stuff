@@ -80,7 +80,7 @@ def plot_shapes(orig_pts, new_pts):
         height = (ymax - ymin)/2 * zoom
         plt.window(xmid - width, xmid + width, ymid - height, ymid + height)
         plt.axes("on")
-        plt.grid()
+        plt.grid(1, 1, "gray")
 
         # Preimage (blue)
         ox = [p[0] for p in orig_pts] + [orig_pts[0][0]]
@@ -100,9 +100,9 @@ def plot_shapes(orig_pts, new_pts):
         print("[t] trace points | [b] table view | [Enter] exit graph")
         z = input(">").strip().lower()
         if z == "+":
-            zoom /= 1.5
+            zoom = zoom / 1.5
         elif z == "-":
-            zoom *= 1.5
+            zoom = zoom * 1.5
         elif z == "t":
             trace_points(orig_pts, new_pts)
         elif z == "b":
@@ -117,8 +117,8 @@ def trace_points(orig, new):
     n = len(orig)
     while True:
         print("\nTrace mode:")
-        print(f"Preimage {i+1}: {orig[i]}")
-        print(f"Image    {i+1}: {new[i]}")
+        print("Preimage " + str(i+1) + ": " + str(orig[i]))
+        print("Image    " + str(i+1) + ": " + str(new[i]))
         cmd = input("[n] next | [p] previous | [Enter] exit: ").lower().strip()
         if cmd == "n":
             i = (i + 1) % n
@@ -132,8 +132,11 @@ def trace_points(orig, new):
 def show_table(orig, new):
     print("\n#   Preimage (x, y)       Image (x, y)")
     print("------------------------------------------")
-    for i, (o, n) in enumerate(zip(orig, new), start=1):
-        print(f"{i:<2}  ({o[0]:>6.2f}, {o[1]:>6.2f})   →  ({n[0]:>6.2f}, {n[1]:>6.2f})")
+    for i in range(len(orig)):
+        o = orig[i]
+        n = new[i]
+        line = str(i+1) + "  (" + str(round(o[0],2)) + ", " + str(round(o[1],2)) + ")  ->  (" + str(round(n[0],2)) + ", " + str(round(n[1],2)) + ")"
+        print(line)
     input("\nPress ENTER to return...")
 
 # ======== OPERATION HANDLERS ========
@@ -156,23 +159,26 @@ def transform(points):
         print("6: y = k")
         mode = int(input("Choose: "))
         k = 0
-        if mode in [5, 6]:
+        if mode == 5 or mode == 6:
             k = float(input("Enter k value: "))
-        for (x, y) in points:
+        for pt in points:
+            x, y = pt
             result.append(reflect_point(x, y, mode, k))
 
     elif choice == 2:
         print("\nEnter translation vector <a, b>")
         a = float(input(" a: "))
         b = float(input(" b: "))
-        for (x, y) in points:
+        for pt in points:
+            x, y = pt
             result.append(translate_point(x, y, a, b))
 
     elif choice == 3:
         angle = float(input("\nEnter rotation angle (degrees): "))
         aboutx = float(input("Rotate about x: "))
         abouty = float(input("Rotate about y: "))
-        for (x, y) in points:
+        for pt in points:
+            x, y = pt
             result.append(rotate_point(x, y, angle, (aboutx, abouty)))
 
     return result
@@ -184,7 +190,7 @@ def numeric_mode():
     result = transform(points)
     print("\n--- RESULTS ---")
     for i in range(len(points)):
-        print(f"Point {i+1}: {points[i]} → {result[i]}")
+        print("Point " + str(i+1) + ": " + str(points[i]) + " -> " + str(result[i]))
     input("\nPress ENTER to continue...")
 
 def graph_mode():
