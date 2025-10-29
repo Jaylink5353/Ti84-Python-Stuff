@@ -95,7 +95,7 @@ def plot_shapes(orig, new):
         height = (ymax - ymin) / 2 * zoom
         plt.window(xmid - width, xmid + width, ymid - height, ymid + height)
         plt.axes("on")
-        plt.grid(1, 1, "gray")
+        plt.grid()
 
         draw_shape(orig, 0, 0, 255)
         draw_shape(new, 255, 0, 0)
