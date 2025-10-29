@@ -1,36 +1,53 @@
 import math
-import ti_plotlib as plt
+
+# --- Safe import for PC testing (mock ti_plotlib) ---
+try:
+    import ti_plotlib as plt
+except ImportError:
+    import matplotlib.pyplot as plt
+    class _MockPlot:
+        def __init__(self):
+            self.zoom = 10
+        def cls(self): plt.clf()
+        def window(self, xmin, xmax, ymin, ymax): plt.axis([xmin, xmax, ymin, ymax])
+        def axes(self, on): pass
+        def grid(self, x, y, color): plt.grid(True)
+        def color(self, r, g, b): plt.gca().set_prop_cycle(None)
+        def plot(self, x, y, s): plt.plot(x, y, 'o-')
+        def line(self, x1, y1, x2, y2): plt.plot([x1, x2], [y1, y2], 'gray')
+        def text(self, x, y, s): plt.text(x, y, s)
+        def show_plot(self): plt.show()
+    plt = _MockPlot()
 
 # ======== TRANSFORMATION FUNCTIONS ========
 
-def reflect_point(x, y, axis):
-    if axis == 1:   # x-axis
+def reflect_point(x, y, mode, k=0):
+    # axis modes: 1:x-axis, 2:y-axis, 3:y=x, 4:y=-x, 5:x=k, 6:y=k
+    if mode == 1:  # x-axis
         return x, -y
-    elif axis == 2: # y-axis
+    elif mode == 2:  # y-axis
         return -x, y
-    elif axis == 3: # y = x
+    elif mode == 3:  # y = x
         return y, x
-    elif axis == 4: # y = -x
+    elif mode == 4:  # y = -x
         return -y, -x
-    else:
-        return x, y
+    elif mode == 5:  # x = k
+        return 2 * k - x, y
+    elif mode == 6:  # y = k
+        return x, 2 * k - y
+    return x, y
 
 def translate_point(x, y, a, b):
     return x + a, y + b
 
-def rotate_point(x, y, angle):
-    angle = angle % 360
-    if angle == 90:
-        return -y, x
-    elif angle == 180:
-        return -x, -y
-    elif angle == 270:
-        return y, -x
-    else:
-        rad = math.radians(angle)
-        xr = x * math.cos(rad) - y * math.sin(rad)
-        yr = x * math.sin(rad) + y * math.cos(rad)
-        return round(xr, 4), round(yr, 4)
+def rotate_point(x, y, angle, about=(0, 0)):
+    ox, oy = about
+    x -= ox
+    y -= oy
+    rad = math.radians(angle % 360)
+    xr = x * math.cos(rad) - y * math.sin(rad)
+    yr = x * math.sin(rad) + y * math.cos(rad)
+    return round(xr + ox, 4), round(yr + oy, 4)
 
 def get_points():
     pts = []
@@ -44,38 +61,85 @@ def get_points():
 
 # ======== GRAPHING ========
 
-def plot_points(orig_pts, new_pts):
-    plt.cls()
-    plt.window(-10, 10, -10, 10)
-    plt.axes("on")
-    plt.grid(1, 1, "gray")
+def auto_window(points, margin=2):
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    xmin, xmax = min(xs)-margin, max(xs)+margin
+    ymin, ymax = min(ys)-margin, max(ys)+margin
+    return xmin, xmax, ymin, ymax
 
-    # Plot original points (blue)
-    ox = [p[0] for p in orig_pts]
-    oy = [p[1] for p in orig_pts]
-    plt.color(0, 0, 255)
-    plt.plot(ox, oy, "o")
+def plot_shapes(orig_pts, new_pts):
+    zoom = 1.0
+    while True:
+        plt.cls()
+        all_pts = orig_pts + new_pts
+        xmin, xmax, ymin, ymax = auto_window(all_pts)
+        xmid = (xmax + xmin)/2
+        ymid = (ymax + ymin)/2
+        width = (xmax - xmin)/2 * zoom
+        height = (ymax - ymin)/2 * zoom
+        plt.window(xmid - width, xmid + width, ymid - height, ymid + height)
+        plt.axes("on")
+        plt.grid()
 
-    # Plot transformed points (red)
-    nx = [p[0] for p in new_pts]
-    ny = [p[1] for p in new_pts]
-    plt.color(255, 0, 0)
-    plt.plot(nx, ny, "o")
+        # Preimage (blue)
+        ox = [p[0] for p in orig_pts] + [orig_pts[0][0]]
+        oy = [p[1] for p in orig_pts] + [orig_pts[0][1]]
+        plt.color(0, 0, 255)
+        plt.plot(ox, oy, "o")
 
-    # Optionally connect corresponding points
-    plt.color(128, 128, 128)
-    for i in range(len(orig_pts)):
-        plt.line(ox[i], oy[i], nx[i], ny[i])
+        # Image (red)
+        nx = [p[0] for p in new_pts] + [new_pts[0][0]]
+        ny = [p[1] for p in new_pts] + [new_pts[0][1]]
+        plt.color(255, 0, 0)
+        plt.plot(nx, ny, "o")
 
-    plt.show_plot()
-    input("\nPress ENTER to continue...")
+        plt.show_plot()
+        print("\nOptions:")
+        print("[+] zoom in | [-] zoom out")
+        print("[t] trace points | [b] table view | [Enter] exit graph")
+        z = input(">").strip().lower()
+        if z == "+":
+            zoom /= 1.5
+        elif z == "-":
+            zoom *= 1.5
+        elif z == "t":
+            trace_points(orig_pts, new_pts)
+        elif z == "b":
+            show_table(orig_pts, new_pts)
+        else:
+            break
 
-# ======== MAIN MENUS ========
+# ======== TRACE MODE ========
 
-def numeric_mode():
-    points = get_points()
+def trace_points(orig, new):
+    i = 0
+    n = len(orig)
+    while True:
+        print("\nTrace mode:")
+        print(f"Preimage {i+1}: {orig[i]}")
+        print(f"Image    {i+1}: {new[i]}")
+        cmd = input("[n] next | [p] previous | [Enter] exit: ").lower().strip()
+        if cmd == "n":
+            i = (i + 1) % n
+        elif cmd == "p":
+            i = (i - 1) % n
+        else:
+            break
+
+# ======== TABLE MODE ========
+
+def show_table(orig, new):
+    print("\n#   Preimage (x, y)       Image (x, y)")
+    print("------------------------------------------")
+    for i, (o, n) in enumerate(zip(orig, new), start=1):
+        print(f"{i:<2}  ({o[0]:>6.2f}, {o[1]:>6.2f})   →  ({n[0]:>6.2f}, {n[1]:>6.2f})")
+    input("\nPress ENTER to return...")
+
+# ======== OPERATION HANDLERS ========
+
+def transform(points):
     result = []
-
     print("\n--- Choose Transformation ---")
     print("1: Reflection")
     print("2: Translation")
@@ -88,9 +152,14 @@ def numeric_mode():
         print("2: y-axis")
         print("3: y = x")
         print("4: y = -x")
-        axis = int(input("Choose: "))
+        print("5: x = k")
+        print("6: y = k")
+        mode = int(input("Choose: "))
+        k = 0
+        if mode in [5, 6]:
+            k = float(input("Enter k value: "))
         for (x, y) in points:
-            result.append(reflect_point(x, y, axis))
+            result.append(reflect_point(x, y, mode, k))
 
     elif choice == 2:
         print("\nEnter translation vector <a, b>")
@@ -100,55 +169,30 @@ def numeric_mode():
             result.append(translate_point(x, y, a, b))
 
     elif choice == 3:
-        print("\nRotate about origin by:")
-        print("90, 180, 270 degrees")
-        angle = int(input("Angle: "))
+        angle = float(input("\nEnter rotation angle (degrees): "))
+        aboutx = float(input("Rotate about x: "))
+        abouty = float(input("Rotate about y: "))
         for (x, y) in points:
-            result.append(rotate_point(x, y, angle))
+            result.append(rotate_point(x, y, angle, (aboutx, abouty)))
 
+    return result
+
+# ======== MODES ========
+
+def numeric_mode():
+    points = get_points()
+    result = transform(points)
     print("\n--- RESULTS ---")
     for i in range(len(points)):
-        print("Point", i+1, "→", result[i])
-
+        print(f"Point {i+1}: {points[i]} → {result[i]}")
     input("\nPress ENTER to continue...")
 
 def graph_mode():
     points = get_points()
-    print("\n--- Choose Transformation ---")
-    print("1: Reflection")
-    print("2: Translation")
-    print("3: Rotation")
-    choice = int(input("Choose: "))
+    result = transform(points)
+    plot_shapes(points, result)
 
-    result = []
-
-    if choice == 1:
-        print("\nReflect over:")
-        print("1: x-axis")
-        print("2: y-axis")
-        print("3: y = x")
-        print("4: y = -x")
-        axis = int(input("Choose: "))
-        for (x, y) in points:
-            result.append(reflect_point(x, y, axis))
-
-    elif choice == 2:
-        print("\nEnter translation vector <a, b>")
-        a = float(input(" a: "))
-        b = float(input(" b: "))
-        for (x, y) in points:
-            result.append(translate_point(x, y, a, b))
-
-    elif choice == 3:
-        print("\nRotate about origin by:")
-        print("90, 180, 270 degrees")
-        angle = int(input("Angle: "))
-        for (x, y) in points:
-            result.append(rotate_point(x, y, angle))
-
-    plot_points(points, result)
-
-# ======== PROGRAM ENTRY ========
+# ======== MAIN MENU ========
 
 def main():
     while True:
